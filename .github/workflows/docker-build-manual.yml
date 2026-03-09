@@ -101,5 +101,7 @@ jobs:
             echo ""
             echo "**Image Tags:**"
             echo "- temporaliotest/server:sha-${GITHUB_SHA:0:7}"
+            echo "- temporaliotest/server:sha-${GITHUB_SHA}"
             echo "- temporaliotest/admin-tools:sha-${GITHUB_SHA:0:7}"
+            echo "- temporaliotest/admin-tools:sha-${GITHUB_SHA}"
           } >> "$GITHUB_STEP_SUMMARY"

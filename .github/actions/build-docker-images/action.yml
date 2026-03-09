@@ -96,7 +96,8 @@ runs:
       working-directory: ${{ github.workspace }}
       env:
         IMAGE_REPO: temporaliotest
-        IMAGE_SHA_TAG: ${{ steps.image-tags.outputs.sha }}
+        IMAGE_SHA_SHORT_TAG: ${{ steps.image-tags.outputs.sha_short }}
+        IMAGE_SHA_FULL_TAG: ${{ steps.image-tags.outputs.sha_full }}
         IMAGE_BRANCH_TAG: ${{ steps.image-tags.outputs.tag }}
         TEMPORAL_SHA: ${{ github.sha }}
         TAG_LATEST: ${{ inputs.tag-latest }}
@@ -122,7 +123,8 @@ runs:
       working-directory: ${{ github.workspace }}
       env:
         IMAGE_REPO: temporaliotest
-        IMAGE_SHA_TAG: ${{ steps.image-tags.outputs.sha }}
+        IMAGE_SHA_SHORT_TAG: ${{ steps.image-tags.outputs.sha_short }}
+        IMAGE_SHA_FULL_TAG: ${{ steps.image-tags.outputs.sha_full }}
         IMAGE_BRANCH_TAG: ${{ steps.image-tags.outputs.tag }}
         TEMPORAL_SHA: ${{ github.sha }}
         TAG_LATEST: ${{ inputs.tag-latest }}
