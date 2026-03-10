@@ -89,15 +89,21 @@ jobs:
           dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Output image tags
+        env:
+          INPUT_REF: ${{ inputs.ref }}
+          INPUT_CLI_VERSION: ${{ inputs['cli-version'] }}
+          INPUT_PLATFORM: ${{ inputs.platform || 'linux/amd64,linux/arm64' }}
+          INPUT_PUSH: ${{ inputs.push }}
+          INPUT_TAG_LATEST: ${{ inputs['tag-latest'] }}
         run: |
           {
             echo "### Docker Images Built"
             echo ""
-            echo "**Git Ref:** ${{ inputs.ref }}"
-            echo "**CLI Version:** ${{ inputs.cli-version }}"
-            echo "**Platform:** ${{ inputs.platform || 'linux/amd64,linux/arm64' }}"
-            echo "**Pushed to Docker Hub:** ${{ inputs.push }}"
-            echo "**Tagged as latest:** ${{ inputs.tag-latest }}"
+            echo "**Git Ref:** ${INPUT_REF}"
+            echo "**CLI Version:** ${INPUT_CLI_VERSION}"
+            echo "**Platform:** ${INPUT_PLATFORM}"
+            echo "**Pushed to Docker Hub:** ${INPUT_PUSH}"
+            echo "**Tagged as latest:** ${INPUT_TAG_LATEST}"
             echo ""
             echo "**Image Tags:**"
             echo "- temporaliotest/server:sha-${GITHUB_SHA:0:7}"
