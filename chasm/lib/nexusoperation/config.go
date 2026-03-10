@@ -141,6 +141,20 @@ Adding high-cardinality tags (like unique operation names) can significantly inc
 query complexity. Consider the cardinality impact when enabling these tags.`,
 )
 
+var LongPollTimeout = dynamicconfig.NewNamespaceDurationSetting(
+	"nexusoperation.longPollTimeout",
+	20*time.Second,
+	`Timeout for nexus operation long-poll requests.`,
+)
+
+var LongPollBuffer = dynamicconfig.NewNamespaceDurationSetting(
+	"nexusoperation.longPollBuffer",
+	time.Second,
+	`A buffer used to adjust the nexus operation long-poll timeouts.
+Specifically, nexus operation long-poll requests are timed out at a time which leaves at least the buffer's duration
+remaining before the caller's deadline, if permitted by the caller's deadline.`,
+)
+
 var UseNewFailureWireFormat = dynamicconfig.NewNamespaceBoolSetting(
 	"nexusoperation.useNewFailureWireFormat",
 	true,
@@ -165,6 +179,10 @@ type Config struct {
 	CallbackURLTemplate                 dynamicconfig.StringPropertyFn
 	UseNewFailureWireFormat             dynamicconfig.BoolPropertyFnWithNamespaceFilter
 	RecordCancelRequestCompletionEvents dynamicconfig.BoolPropertyFn
+	LongPollTimeout                     dynamicconfig.DurationPropertyFnWithNamespaceFilter
+	LongPollBuffer                      dynamicconfig.DurationPropertyFnWithNamespaceFilter
+	VisibilityMaxPageSize               dynamicconfig.IntPropertyFnWithNamespaceFilter
+	MaxIDLengthLimit                    dynamicconfig.IntPropertyFn
 	RetryPolicy                         func() backoff.RetryPolicy
 }
 
@@ -185,6 +203,10 @@ func configProvider(dc *dynamicconfig.Collection) *Config {
 		PayloadSizeLimit:                   dynamicconfig.BlobSizeLimitError.Get(dc),
 		UseNewFailureWireFormat:            UseNewFailureWireFormat.Get(dc),
 		CallbackURLTemplate:                CallbackURLTemplate.Get(dc),
+		LongPollTimeout:                    LongPollTimeout.Get(dc),
+		LongPollBuffer:                     LongPollBuffer.Get(dc),
+		VisibilityMaxPageSize:              dynamicconfig.FrontendVisibilityMaxPageSize.Get(dc),
+		MaxIDLengthLimit:                   dynamicconfig.MaxIDLengthLimit.Get(dc),
 		RetryPolicy: func() backoff.RetryPolicy {
 			return backoff.NewExponentialRetryPolicy(
 				RetryPolicyInitialInterval.Get(dc)(),

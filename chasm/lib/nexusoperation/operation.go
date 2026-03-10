@@ -5,8 +5,16 @@ import (
 	nexusoperationpb "go.temporal.io/server/chasm/lib/nexusoperation/gen/nexusoperationpb/v1"
 )
 
+var (
+	EndpointSearchAttribute  = chasm.NewSearchAttributeKeyword("Endpoint", chasm.SearchAttributeFieldKeyword01)
+	ServiceSearchAttribute   = chasm.NewSearchAttributeKeyword("Service", chasm.SearchAttributeFieldKeyword02)
+	OperationSearchAttribute = chasm.NewSearchAttributeKeyword("Operation", chasm.SearchAttributeFieldKeyword03)
+	StatusSearchAttribute    = chasm.NewSearchAttributeKeyword("ExecutionStatus", chasm.SearchAttributeFieldLowCardinalityKeyword01)
+)
+
 var _ chasm.Component = (*Operation)(nil)
 var _ chasm.StateMachine[nexusoperationpb.OperationStatus] = (*Operation)(nil)
+var _ chasm.VisibilitySearchAttributesProvider = (*Operation)(nil)
 
 type OperationStore any
 
@@ -44,4 +52,13 @@ func (o *Operation) StateMachineState() nexusoperationpb.OperationStatus {
 
 func (o *Operation) SetStateMachineState(status nexusoperationpb.OperationStatus) {
 	o.Status = status
+}
+
+func (o *Operation) SearchAttributes(_ chasm.Context) []chasm.SearchAttributeKeyValue {
+	return []chasm.SearchAttributeKeyValue{
+		EndpointSearchAttribute.Value(o.Endpoint),
+		ServiceSearchAttribute.Value(o.Service),
+		OperationSearchAttribute.Value(o.Operation),
+		StatusSearchAttribute.Value(operationExecutionStatus(o.Status).String()),
+	}
 }

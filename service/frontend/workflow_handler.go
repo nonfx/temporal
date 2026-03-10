@@ -36,6 +36,7 @@ import (
 	taskqueuespb "go.temporal.io/server/api/taskqueue/v1"
 	"go.temporal.io/server/chasm"
 	"go.temporal.io/server/chasm/lib/activity"
+	"go.temporal.io/server/chasm/lib/nexusoperation"
 	chasmscheduler "go.temporal.io/server/chasm/lib/scheduler"
 	"go.temporal.io/server/chasm/lib/scheduler/gen/schedulerpb/v1"
 	"go.temporal.io/server/client/frontend"
@@ -113,6 +114,7 @@ type (
 	WorkflowHandler struct {
 		workflowservice.UnsafeWorkflowServiceServer
 		activity.FrontendHandler
+		nexusOperationHandler nexusoperation.FrontendHandler
 
 		status int32
 
@@ -178,15 +180,17 @@ func NewWorkflowHandler(
 	scheduleSpecBuilder *scheduler.SpecBuilder,
 	httpEnabled bool,
 	activityHandler activity.FrontendHandler,
+	nexusOperationHandler nexusoperation.FrontendHandler,
 	registry *chasm.Registry,
 	workerDeploymentReadRateLimiter quotas.RequestRateLimiter,
 ) *WorkflowHandler {
 	handler := &WorkflowHandler{
-		FrontendHandler: activityHandler,
-		status:          common.DaemonStatusInitialized,
-		config:          config,
-		tokenSerializer: tasktoken.NewSerializer(),
-		versionChecker:  headers.NewDefaultVersionChecker(),
+		FrontendHandler:       activityHandler,
+		nexusOperationHandler: nexusOperationHandler,
+		status:                common.DaemonStatusInitialized,
+		config:                config,
+		tokenSerializer:       tasktoken.NewSerializer(),
+		versionChecker:        headers.NewDefaultVersionChecker(),
 		namespaceHandler: newNamespaceHandler(
 			logger,
 			persistenceMetadataManager,
@@ -6934,4 +6938,68 @@ func (wh *WorkflowHandler) UnpauseWorkflowExecution(ctx context.Context, request
 	}
 
 	return &workflowservice.UnpauseWorkflowExecutionResponse{}, nil
+}
+
+func (wh *WorkflowHandler) StartNexusOperationExecution(
+	ctx context.Context,
+	request *workflowservice.StartNexusOperationExecutionRequest,
+) (_ *workflowservice.StartNexusOperationExecutionResponse, retError error) {
+	defer log.CapturePanic(wh.logger, &retError)
+	return nil, serviceerror.NewUnimplemented("StartNexusOperationExecution not implemented")
+}
+
+func (wh *WorkflowHandler) DescribeNexusOperationExecution(
+	ctx context.Context,
+	request *workflowservice.DescribeNexusOperationExecutionRequest,
+) (_ *workflowservice.DescribeNexusOperationExecutionResponse, retError error) {
+	defer log.CapturePanic(wh.logger, &retError)
+	return wh.nexusOperationHandler.DescribeNexusOperationExecution(ctx, request)
+}
+
+func (wh *WorkflowHandler) PollNexusOperationExecution(
+	ctx context.Context,
+	request *workflowservice.PollNexusOperationExecutionRequest,
+) (_ *workflowservice.PollNexusOperationExecutionResponse, retError error) {
+	defer log.CapturePanic(wh.logger, &retError)
+	return nil, serviceerror.NewUnimplemented("PollNexusOperationExecution not implemented")
+}
+
+func (wh *WorkflowHandler) ListNexusOperationExecutions(
+	ctx context.Context,
+	request *workflowservice.ListNexusOperationExecutionsRequest,
+) (_ *workflowservice.ListNexusOperationExecutionsResponse, retError error) {
+	defer log.CapturePanic(wh.logger, &retError)
+	return wh.nexusOperationHandler.ListNexusOperationExecutions(ctx, request)
+}
+
+func (wh *WorkflowHandler) CountNexusOperationExecutions(
+	ctx context.Context,
+	request *workflowservice.CountNexusOperationExecutionsRequest,
+) (_ *workflowservice.CountNexusOperationExecutionsResponse, retError error) {
+	defer log.CapturePanic(wh.logger, &retError)
+	return nil, serviceerror.NewUnimplemented("CountNexusOperationExecutions not implemented")
+}
+
+func (wh *WorkflowHandler) RequestCancelNexusOperationExecution(
+	ctx context.Context,
+	request *workflowservice.RequestCancelNexusOperationExecutionRequest,
+) (_ *workflowservice.RequestCancelNexusOperationExecutionResponse, retError error) {
+	defer log.CapturePanic(wh.logger, &retError)
+	return nil, serviceerror.NewUnimplemented("RequestCancelNexusOperationExecution not implemented")
+}
+
+func (wh *WorkflowHandler) TerminateNexusOperationExecution(
+	ctx context.Context,
+	request *workflowservice.TerminateNexusOperationExecutionRequest,
+) (_ *workflowservice.TerminateNexusOperationExecutionResponse, retError error) {
+	defer log.CapturePanic(wh.logger, &retError)
+	return nil, serviceerror.NewUnimplemented("TerminateNexusOperationExecution not implemented")
+}
+
+func (wh *WorkflowHandler) DeleteNexusOperationExecution(
+	ctx context.Context,
+	request *workflowservice.DeleteNexusOperationExecutionRequest,
+) (_ *workflowservice.DeleteNexusOperationExecutionResponse, retError error) {
+	defer log.CapturePanic(wh.logger, &retError)
+	return nil, serviceerror.NewUnimplemented("DeleteNexusOperationExecution not implemented")
 }
