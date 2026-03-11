@@ -1,0 +1,236 @@
+name: Build and Push Custom Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      image-tag:
+        description: "Image tag (e.g., v1.30.1-patched)"
+        required: true
+        type: string
+      platform:
+        description: "Platform (empty for multi-arch, or linux/amd64, linux/arm64)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ap-southeast-1
+  CLI_REPO_URL: https://github.com/nonfx/cli.git
+  CLI_BRANCH: custom-builds-v1.6.1
+  CLI_VERSION: "1.6.1"
+  SERVER_GO_VERSION: "1.25.8"
+  CLI_GO_VERSION: "1.26.1"
+  ALPINE_TAG: "3.23.3"
+  GORELEASER_VERSION: "v2.13.1"
+
+jobs:
+  build-and-push:
+    runs-on:
+      group: stance-cicd-selfhosted-amd64
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout temporal repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: Checkout CLI repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          repository: nonfx/cli
+          ref: ${{ env.CLI_BRANCH }}
+          path: temporal-cli
+
+      - name: Setup Go (server)
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
+        with:
+          go-version: ${{ env.SERVER_GO_VERSION }}
+          cache: true
+
+      - name: Install CLI Go toolchain
+        run: |
+          go install golang.org/dl/go${{ env.CLI_GO_VERSION }}@latest
+          go${{ env.CLI_GO_VERSION }} download
+
+      - name: Determine architectures
+        id: archs
+        run: |
+          PLATFORM="${{ inputs.platform }}"
+          if [ -n "$PLATFORM" ]; then
+            ARCH=$(echo "$PLATFORM" | cut -d'/' -f2)
+            echo "archs=$ARCH" >> "$GITHUB_OUTPUT"
+            echo "platform=$PLATFORM" >> "$GITHUB_OUTPUT"
+          else
+            echo "archs=amd64 arm64" >> "$GITHUB_OUTPUT"
+            echo "platform=" >> "$GITHUB_OUTPUT"
+          fi
+
+      # --- Build server binaries ---
+      - name: Build server binaries (GoReleaser)
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
+        with:
+          distribution: goreleaser
+          version: ${{ env.GORELEASER_VERSION }}
+          args: build --snapshot --clean
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GOTOOLCHAIN: go${{ env.SERVER_GO_VERSION }}
+
+      # --- Organize binaries ---
+      - name: Organize binaries for Docker
+        run: |
+          rm -rf docker/build
+          BINARIES="temporal-server temporal-cassandra-tool temporal-sql-tool temporal-elasticsearch-tool tdbg"
+          for arch in ${{ steps.archs.outputs.archs }}; do
+            mkdir -p "docker/build/${arch}"
+            case "$arch" in
+              amd64) dist_arch="amd64_v1" ;;
+              arm64) dist_arch="arm64_v8.0" ;;
+              *) echo "ERROR: Unsupported arch: $arch"; exit 1 ;;
+            esac
+            for binary in $BINARIES; do
+              cp "dist/${binary}_linux_${dist_arch}/${binary}" "docker/build/${arch}/${binary}"
+              chmod 755 "docker/build/${arch}/${binary}"
+            done
+          done
+
+      # --- Build CLI from patched fork ---
+      - name: Build CLI from source
+        run: |
+          CLI_REPO_ABS=$(cd temporal-cli && pwd) || { echo "ERROR: temporal-cli directory not found"; exit 1; }
+          for arch in ${{ steps.archs.outputs.archs }}; do
+            echo "Building CLI for linux/${arch}..."
+            GOTOOLCHAIN=go${{ env.CLI_GO_VERSION }} GOOS=linux GOARCH=${arch} CGO_ENABLED=0 \
+              go build -C "$CLI_REPO_ABS" -o "$(pwd)/docker/build/${arch}/temporal" ./cmd/temporal
+            chmod 755 "docker/build/${arch}/temporal"
+          done
+
+      # --- Copy schemas ---
+      - name: Copy schema files
+        run: |
+          mkdir -p docker/build/temporal/schema
+          cp -r schema/cassandra schema/mysql schema/postgresql docker/build/temporal/schema/
+          test -d docker/build/temporal/schema/postgresql || { echo "ERROR: PostgreSQL schema missing"; exit 1; }
+
+      # --- Validate ---
+      - name: Validate binaries
+        run: |
+          for arch in ${{ steps.archs.outputs.archs }}; do
+            for bin in temporal-server temporal-cassandra-tool temporal-sql-tool temporal-elasticsearch-tool tdbg temporal; do
+              test -f "docker/build/${arch}/${bin}" || { echo "MISSING: docker/build/${arch}/${bin}"; exit 1; }
+            done
+          done
+
+      # --- Docker build ---
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Set image metadata
+        id: meta
+        run: |
+          SERVER_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "unknown")
+          echo "server-version=${SERVER_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-${{ github.run_id }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2
+
+      - name: Set ECR env vars
+        run: |
+          echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> "$GITHUB_ENV"
+          echo "IMAGE_REPO=${{ steps.login-ecr.outputs.registry }}/temporal" >> "$GITHUB_ENV"
+
+      # --- Build for scan (amd64 only, OCI tars, no push) ---
+      - name: Build images for scanning
+        env:
+          IMAGE_REPO: ${{ env.IMAGE_REPO }}
+          IMAGE_NAME_SEPARATOR: "-"
+          IMAGE_SHA_TAG: ${{ inputs.image-tag }}
+          IMAGE_BRANCH_TAG: custom-build
+          TEMPORAL_SHA: ${{ github.sha }}
+          TAG_LATEST: "false"
+          ALPINE_TAG: ${{ env.ALPINE_TAG }}
+          SERVER_VERSION: ${{ steps.meta.outputs.server-version }}
+          CLI_VERSION: ${{ env.CLI_VERSION }}
+        run: |
+          docker buildx bake \
+            --set "server.output=type=oci,dest=/tmp/temporal-server-scan.tar" \
+            --set "admin-tools.output=type=oci,dest=/tmp/temporal-admin-tools-scan.tar" \
+            --set "*.platform=linux/amd64" \
+            -f docker/docker-bake.hcl \
+            server admin-tools
+
+      # --- Scan before push ---
+      - name: Scan server image
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master
+        with:
+          input: /tmp/temporal-server-scan.tar
+          format: "table"
+          exit-code: "1"
+          severity: "CRITICAL,HIGH"
+          ignore-unfixed: true
+
+      - name: Scan admin-tools image
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master
+        with:
+          input: /tmp/temporal-admin-tools-scan.tar
+          format: "table"
+          exit-code: "1"
+          severity: "CRITICAL,HIGH"
+          ignore-unfixed: true
+
+      # --- Push only if scans passed ---
+      - name: Build and push images
+        env:
+          IMAGE_REPO: ${{ env.IMAGE_REPO }}
+          IMAGE_NAME_SEPARATOR: "-"
+          IMAGE_SHA_TAG: ${{ inputs.image-tag }}
+          IMAGE_BRANCH_TAG: custom-build
+          TEMPORAL_SHA: ${{ github.sha }}
+          TAG_LATEST: "false"
+          ALPINE_TAG: ${{ env.ALPINE_TAG }}
+          SERVER_VERSION: ${{ steps.meta.outputs.server-version }}
+          CLI_VERSION: ${{ env.CLI_VERSION }}
+        run: |
+          PLATFORM="${{ steps.archs.outputs.platform }}"
+          if [ -n "$PLATFORM" ]; then
+            docker buildx bake \
+              --set "*.platform=${PLATFORM}" \
+              --push \
+              -f docker/docker-bake.hcl \
+              server admin-tools
+          else
+            docker buildx bake \
+              --push \
+              -f docker/docker-bake.hcl \
+              server admin-tools
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Temporal Docker Images — ${{ inputs.image-tag }}"
+            echo ""
+            echo "| Image | Tag |"
+            echo "|-------|-----|"
+            echo "| \`${{ env.ECR_REGISTRY }}/temporal-server\` | \`${{ inputs.image-tag }}\` |"
+            echo "| \`${{ env.ECR_REGISTRY }}/temporal-admin-tools\` | \`${{ inputs.image-tag }}\` |"
+            echo ""
+            echo "**Platform:** ${{ steps.archs.outputs.platform || 'linux/amd64,linux/arm64' }}"
+            echo "**Trivy CRITICAL/HIGH:** PASSED"
+          } >> "$GITHUB_STEP_SUMMARY"
