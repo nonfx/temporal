@@ -9,7 +9,8 @@ FROM --platform=$TARGETPLATFORM alpine:${ALPINE_TAG}
 
 ARG TARGETARCH
 
-RUN apk add --no-cache \
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache \
     ca-certificates \
     tzdata && addgroup -g 1000 temporal && \
     adduser -u 1000 -G temporal -D temporal
