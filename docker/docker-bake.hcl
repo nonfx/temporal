@@ -10,6 +10,10 @@ variable "IMAGE_REPO" {
   default = "temporaliotest"
 }
 
+variable "IMAGE_NAME_SEPARATOR" {
+  default = "/"
+}
+
 variable "IMAGE_SHA_TAG" {
   default = ""
 }
@@ -46,9 +50,9 @@ target "admin-tools" {
     ALPINE_TAG = "${ALPINE_TAG}"
   }
   tags = compact([
-    "${IMAGE_REPO}/admin-tools:${IMAGE_SHA_TAG}",
-    "${IMAGE_REPO}/admin-tools:${SAFE_IMAGE_BRANCH_TAG}",
-    TAG_LATEST ? "${IMAGE_REPO}/admin-tools:latest" : "",
+    "${IMAGE_REPO}${IMAGE_NAME_SEPARATOR}admin-tools:${IMAGE_SHA_TAG}",
+    "${IMAGE_REPO}${IMAGE_NAME_SEPARATOR}admin-tools:${SAFE_IMAGE_BRANCH_TAG}",
+    TAG_LATEST ? "${IMAGE_REPO}${IMAGE_NAME_SEPARATOR}admin-tools:latest" : "",
   ])
   platforms = ["linux/amd64", "linux/arm64"]
   labels = {
@@ -71,9 +75,9 @@ target "server" {
     ALPINE_TAG = "${ALPINE_TAG}"
   }
   tags = compact([
-    "${IMAGE_REPO}/server:${IMAGE_SHA_TAG}",
-    "${IMAGE_REPO}/server:${SAFE_IMAGE_BRANCH_TAG}",
-    TAG_LATEST ? "${IMAGE_REPO}/server:latest" : "",
+    "${IMAGE_REPO}${IMAGE_NAME_SEPARATOR}server:${IMAGE_SHA_TAG}",
+    "${IMAGE_REPO}${IMAGE_NAME_SEPARATOR}server:${SAFE_IMAGE_BRANCH_TAG}",
+    TAG_LATEST ? "${IMAGE_REPO}${IMAGE_NAME_SEPARATOR}server:latest" : "",
   ])
   platforms = ["linux/amd64", "linux/arm64"]
   labels = {

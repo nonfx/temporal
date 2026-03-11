@@ -13,7 +13,8 @@ set -eu
 #   CLI_VERSION      - Temporal CLI version (default: 1.6.1)
 #   CLI_REPO         - Path to patched CLI repo (default: ../temporal-cli)
 #   IMAGE_REPO       - Docker image repository (default: temporaliotest)
-#   IMAGE_TAG        - ECR image tag (default: v1.30.1-test)
+#                      For ECR: IMAGE_REPO=<account>.dkr.ecr.<region>.amazonaws.com/temporal
+#   IMAGE_TAG        - Image tag (default: v1.30.1-test)
 #   ALPINE_TAG       - Alpine base image tag (default: 3.23.3)
 # =============================================================================
 
@@ -165,6 +166,11 @@ fi
 echo "  Server version: $SERVER_VERSION"
 
 # Build with docker buildx bake
+# ECR repos use "-" separator (temporal-server), Docker Hub uses "/" (temporaliotest/server)
+case "$IMAGE_REPO" in
+    *.dkr.ecr.*) export IMAGE_NAME_SEPARATOR="-" ;;
+    *)           export IMAGE_NAME_SEPARATOR="/" ;;
+esac
 export IMAGE_REPO
 export IMAGE_SHA_TAG="$IMAGE_TAG"
 export IMAGE_BRANCH_TAG="custom-build"
