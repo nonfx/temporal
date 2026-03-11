@@ -27,7 +27,6 @@ import (
 	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/worker"
@@ -143,7 +142,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 								Endpoint:  endpointName,
 								Service:   "service",
 								Operation: "operation",
-								Input:     mustToPayload(s.T(), "input"),
+								Input:     testcore.MustToPayload(s.T(), "input"),
 							},
 						},
 					},
@@ -217,7 +216,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 							Endpoint:  endpointName,
 							Service:   "service",
 							Operation: "operation",
-							Input:     mustToPayload(s.T(), "input"),
+							Input:     testcore.MustToPayload(s.T(), "input"),
 						},
 					},
 				},
@@ -357,7 +356,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 								Endpoint:  endpointName,
 								Service:   "service",
 								Operation: "operation",
-								Input:     mustToPayload(s.T(), "input"),
+								Input:     testcore.MustToPayload(s.T(), "input"),
 							},
 						},
 					},
@@ -474,7 +473,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 								Endpoint:  endpointName,
 								Service:   "service",
 								Operation: "operation",
-								Input:     mustToPayload(s.T(), "input"),
+								Input:     testcore.MustToPayload(s.T(), "input"),
 							},
 						},
 					},
@@ -507,7 +506,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 						CompleteWorkflowExecutionCommandAttributes: &commandpb.CompleteWorkflowExecutionCommandAttributes{
 							Result: &commonpb.Payloads{
 								Payloads: []*commonpb.Payload{
-									mustToPayload(s.T(), pollResp.History.Events[failedEventIdx].GetNexusOperationFailedEventAttributes().Failure.Cause.Message),
+									testcore.MustToPayload(s.T(), pollResp.History.Events[failedEventIdx].GetNexusOperationFailedEventAttributes().Failure.Cause.Message),
 								},
 							},
 						},
@@ -635,7 +634,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 							Endpoint:  endpointName,
 							Service:   "service",
 							Operation: "operation",
-							Input:     mustToPayload(s.T(), "input"),
+							Input:     testcore.MustToPayload(s.T(), "input"),
 						},
 					},
 				},
@@ -676,7 +675,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 		largeCompletion := nexusrpc.CompleteOperationOptions{
 			// Use -10 to avoid hitting MaxNexusAPIRequestBodyBytes. Actual payload will still exceed limit because of
 			// additional Content headers. See common/rpc/grpc.go:66
-			Result: mustToPayload(s.T(), strings.Repeat("a", (2*1024*1024)-10)),
+			Result: testcore.MustToPayload(s.T(), strings.Repeat("a", (2*1024*1024)-10)),
 			Header: nexus.Header{commonnexus.CallbackTokenHeader: callbackToken},
 		}
 		s.NoError(err)
@@ -698,7 +697,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 		invalidCallbackURL := "http://" + s.HttpAPIAddress() + "/" + commonnexus.RouteCompletionCallback.Path(invalidNamespace)
 
 		completion := nexusrpc.CompleteOperationOptions{
-			Result: mustToPayload(s.T(), "result"),
+			Result: testcore.MustToPayload(s.T(), "result"),
 			Header: nexus.Header{commonnexus.CallbackTokenHeader: callbackToken},
 		}
 		_, err = sendNexusCompletionRequest(s, ctx, invalidCallbackURL, completion)
@@ -922,7 +921,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 								Endpoint:  endpointName,
 								Service:   "test-service",
 								Operation: "my-operation",
-								Input:     mustToPayload(s.T(), "input"),
+								Input:     testcore.MustToPayload(s.T(), "input"),
 							},
 						},
 					},
@@ -994,7 +993,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 						CompleteWorkflowExecutionCommandAttributes: &commandpb.CompleteWorkflowExecutionCommandAttributes{
 							Result: &commonpb.Payloads{
 								Payloads: []*commonpb.Payload{
-									mustToPayload(s.T(), "result"),
+									testcore.MustToPayload(s.T(), "result"),
 								},
 							},
 						},
@@ -1156,7 +1155,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 								Endpoint:  endpointName,
 								Service:   "service",
 								Operation: "operation",
-								Input:     mustToPayload(s.T(), "input"),
+								Input:     testcore.MustToPayload(s.T(), "input"),
 							},
 						},
 					},
@@ -1243,7 +1242,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 			cleanup := s.OverrideDynamicConfig(dynamicconfig.EnableNexus, false)
 			defer cleanup()
 			completion := nexusrpc.CompleteOperationOptions{
-				Result: mustToPayload(t, "result"),
+				Result: testcore.MustToPayload(t, "result"),
 			}
 			publicCallbackURL := "http://" + s.HttpAPIAddress() + "/" + commonnexus.RouteCompletionCallback.Path(s.Namespace().String())
 			snap, err := sendNexusCompletionRequest(s, ctx, publicCallbackURL, completion)
@@ -1257,7 +1256,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 			cleanup := s.OverrideDynamicConfig(dynamicconfig.EnableNexus, false)
 			defer cleanup()
 			completion := nexusrpc.CompleteOperationOptions{
-				Result: mustToPayload(t, "result"),
+				Result: testcore.MustToPayload(t, "result"),
 			}
 			publicCallbackURL := "http://" + s.HttpAPIAddress() + commonnexus.PathCompletionCallbackNoIdentifier
 			snap, err := sendNexusCompletionRequest(s, ctx, publicCallbackURL, completion)
@@ -1273,7 +1272,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 
 			publicCallbackURL := "http://" + s.HttpAPIAddress() + "/" + commonnexus.RouteCompletionCallback.Path("namespace-doesnt-exist")
 			completion := nexusrpc.CompleteOperationOptions{
-				Result: mustToPayload(t, "result"),
+				Result: testcore.MustToPayload(t, "result"),
 				Header: nexus.Header{commonnexus.CallbackTokenHeader: tokenWithBadNamespace},
 			}
 			snap, err := sendNexusCompletionRequest(s, ctx, publicCallbackURL, completion)
@@ -1289,7 +1288,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 
 			publicCallbackURL := "http://" + s.HttpAPIAddress() + commonnexus.PathCompletionCallbackNoIdentifier
 			completion := nexusrpc.CompleteOperationOptions{
-				Result: mustToPayload(t, "result"),
+				Result: testcore.MustToPayload(t, "result"),
 				Header: nexus.Header{commonnexus.CallbackTokenHeader: tokenWithBadNamespace},
 			}
 			snap, err := sendNexusCompletionRequest(s, ctx, publicCallbackURL, completion)
@@ -1306,7 +1305,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 			namespaceID := s.GetNamespaceID(s.Namespace().String())
 			validToken := generateValidCallbackToken(t, namespaceID, testcore.RandomizeStr("workflow"), uuid.NewString())
 			completion := nexusrpc.CompleteOperationOptions{
-				Result:         mustToPayload(t, "result"),
+				Result:         testcore.MustToPayload(t, "result"),
 				OperationToken: strings.Repeat("long", 2000),
 				Header:         nexus.Header{commonnexus.CallbackTokenHeader: validToken},
 			}
@@ -1327,7 +1326,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 			validToken := generateValidCallbackToken(t, namespaceID, testcore.RandomizeStr("workflow"), uuid.NewString())
 
 			completion := nexusrpc.CompleteOperationOptions{
-				Result:         mustToPayload(t, "result"),
+				Result:         testcore.MustToPayload(t, "result"),
 				OperationToken: strings.Repeat("long", 2000),
 				Header:         nexus.Header{commonnexus.CallbackTokenHeader: validToken},
 			}
@@ -1343,7 +1342,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 
 		t.Run("InvalidCallbackToken", func(t *testing.T) {
 			completion := nexusrpc.CompleteOperationOptions{
-				Result: mustToPayload(t, "result"),
+				Result: testcore.MustToPayload(t, "result"),
 			}
 			publicCallbackURL := "http://" + s.HttpAPIAddress() + "/" + commonnexus.RouteCompletionCallback.Path(s.Namespace().String())
 			// metrics collection is not initialized before callback validation
@@ -1358,7 +1357,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 
 		t.Run("InvalidCallbackTokenNoIdentifier", func(t *testing.T) {
 			completion := nexusrpc.CompleteOperationOptions{
-				Result: mustToPayload(t, "result"),
+				Result: testcore.MustToPayload(t, "result"),
 			}
 			publicCallbackURL := "http://" + s.HttpAPIAddress() + commonnexus.PathCompletionCallbackNoIdentifier
 			// metrics collection is not initialized before callback validation
@@ -1381,7 +1380,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 			validToken := generateValidCallbackToken(t, namespaceID, testcore.RandomizeStr("workflow"), uuid.NewString())
 
 			completion := nexusrpc.CompleteOperationOptions{
-				Result: mustToPayload(t, "result"),
+				Result: testcore.MustToPayload(t, "result"),
 				Header: nexus.Header{
 					commonnexus.CallbackTokenHeader: validToken,
 					"user-agent":                    "Nexus-go-sdk/v99.0.0",
@@ -1409,7 +1408,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 			validToken := generateValidCallbackToken(t, namespaceID, testcore.RandomizeStr("workflow"), uuid.NewString())
 
 			completion := nexusrpc.CompleteOperationOptions{
-				Result: mustToPayload(t, "result"),
+				Result: testcore.MustToPayload(t, "result"),
 				Header: nexus.Header{
 					commonnexus.CallbackTokenHeader: validToken,
 					"user-agent":                    "Nexus-go-sdk/v99.0.0",
@@ -1446,7 +1445,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 		callbackToken := generateValidCallbackToken(s.T(), namespaceID, testcore.RandomizeStr("workflow"), uuid.NewString())
 
 		completion := nexusrpc.CompleteOperationOptions{
-			Result: mustToPayload(s.T(), "result"),
+			Result: testcore.MustToPayload(s.T(), "result"),
 			Header: nexus.Header{commonnexus.CallbackTokenHeader: callbackToken},
 		}
 
@@ -1476,7 +1475,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 		callbackToken := generateValidCallbackToken(s.T(), namespaceID, testcore.RandomizeStr("workflow"), uuid.NewString())
 
 		completion := nexusrpc.CompleteOperationOptions{
-			Result: mustToPayload(s.T(), "result"),
+			Result: testcore.MustToPayload(s.T(), "result"),
 			Header: nexus.Header{commonnexus.CallbackTokenHeader: callbackToken},
 		}
 		publicCallbackURL := "http://" + s.HttpAPIAddress() + commonnexus.PathCompletionCallbackNoIdentifier
@@ -1612,7 +1611,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 							Endpoint:  endpointName,
 							Service:   "test-service",
 							Operation: "my-operation",
-							Input:     mustToPayload(s.T(), "input"),
+							Input:     testcore.MustToPayload(s.T(), "input"),
 						},
 					},
 				},
@@ -1660,7 +1659,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 						CompleteWorkflowExecutionCommandAttributes: &commandpb.CompleteWorkflowExecutionCommandAttributes{
 							Result: &commonpb.Payloads{
 								Payloads: []*commonpb.Payload{
-									mustToPayload(s.T(), "result"),
+									testcore.MustToPayload(s.T(), "result"),
 								},
 							},
 						},
@@ -1775,7 +1774,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 							Endpoint:  endpointName,
 							Service:   "service",
 							Operation: "operation",
-							Input:     mustToPayload(s.T(), "input"),
+							Input:     testcore.MustToPayload(s.T(), "input"),
 						},
 					},
 				},
@@ -1900,7 +1899,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 							Endpoint:  endpointName,
 							Service:   "service",
 							Operation: "operation",
-							Input:     mustToPayload(s.T(), "input"),
+							Input:     testcore.MustToPayload(s.T(), "input"),
 						},
 					},
 				},
@@ -1955,7 +1954,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 		}
 		s.True(seenStartedEvent)
 		completion := nexusrpc.CompleteOperationOptions{
-			Result: mustToPayload(s.T(), "result"),
+			Result: testcore.MustToPayload(s.T(), "result"),
 			Header: nexus.Header{commonnexus.CallbackTokenHeader: callbackToken},
 		}
 		_, err = sendNexusCompletionRequest(s, ctx, publicCallbackURL, completion)
@@ -2094,7 +2093,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 			ev, err := history.Next()
 			s.NoError(err)
 			if attr := ev.GetNexusOperationCompletedEventAttributes(); attr != nil {
-				protorequire.ProtoEqual(s.T(), mustToPayload(s.T(), nil), attr.GetResult())
+				protorequire.ProtoEqual(s.T(), testcore.MustToPayload(s.T(), nil), attr.GetResult())
 				break
 			}
 		}
@@ -2828,7 +2827,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 							Endpoint:               endpointName,
 							Service:                "service",
 							Operation:              "operation",
-							Input:                  mustToPayload(s.T(), "input"),
+							Input:                  testcore.MustToPayload(s.T(), "input"),
 							ScheduleToCloseTimeout: durationpb.New(2 * time.Second),
 						},
 					},
@@ -2925,7 +2924,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 							Endpoint:               endpointName,
 							Service:                "service",
 							Operation:              "operation",
-							Input:                  mustToPayload(s.T(), "input"),
+							Input:                  testcore.MustToPayload(s.T(), "input"),
 							ScheduleToStartTimeout: durationpb.New(2 * time.Second),
 						},
 					},
@@ -3031,7 +3030,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 							Endpoint:            endpointName,
 							Service:             "service",
 							Operation:           "operation",
-							Input:               mustToPayload(s.T(), "input"),
+							Input:               testcore.MustToPayload(s.T(), "input"),
 							StartToCloseTimeout: durationpb.New(2 * time.Second),
 						},
 					},
@@ -3136,7 +3135,7 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 							Endpoint:  commonnexus.SystemEndpoint,
 							Service:   "TestService",
 							Operation: "TestOperation",
-							Input:     mustToPayload(s.T(), "Temporal"),
+							Input:     testcore.MustToPayload(s.T(), "Temporal"),
 						},
 					},
 				},
@@ -3188,14 +3187,6 @@ func runNexusWorkflowTests(t *testing.T, extraOpts ...testcore.TestOption) {
 		s.NoError(run.Get(ctx, &response))
 		s.Equal("Hello, Temporal", response)
 	})
-}
-
-// mustToPayload converts a value to a payload or panics.
-func mustToPayload(t *testing.T, v any) *commonpb.Payload {
-	conv := converter.GetDefaultDataConverter()
-	payload, err := conv.ToPayload(v)
-	require.NoError(t, err)
-	return payload
 }
 
 // generateValidCallbackToken creates a valid callback token for testing.
