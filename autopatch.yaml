@@ -1,0 +1,37 @@
+# autopatch.yaml — AI-powered container vulnerability remediation for Temporal
+
+scanner:
+  name: aikido-api
+  api:
+    base_url: https://app.aikido.dev/api
+    auth:
+      client_id: "${op://Developers/Aikido REST API/client_id}"
+      client_secret: "${op://Developers/Aikido REST API/client_secret}"
+      apikey: "${op://Developers/Aikido MCP API Key/credential}"
+
+harness:
+  name: claude
+  command: claude
+  args: ["-p", "{{prompt}}", "--allowedTools", "Edit,Read,Bash,Glob,Grep,Write"]
+
+containers:
+  temporal-server:
+    dockerfile: docker/targets/server.Dockerfile
+    context: docker
+    platform: linux/arm64
+
+  temporal-admin-tools:
+    dockerfile: docker/targets/admin-tools.Dockerfile
+    context: docker
+    platform: linux/arm64
+
+pipeline:
+  max_retries: 3
+  min_severity: high
+  fail_on_severity: high
+  verify_scanner: aikido-cli
+
+output:
+  dir: .autopatch-tmp
+  report: autopatch-report.md
+  keep_logs: true
